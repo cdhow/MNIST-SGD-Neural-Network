@@ -1,5 +1,4 @@
 import numpy as np
-import matplotlib as plt
 
 
 # Sigmoid utility function
@@ -13,7 +12,7 @@ def sigmoid_prime(x):
 
 
 class NeuralNetwork():
-    def __init__(self, sizes, epochs=30, l_rate=0.1, batch_size=20, params=None):
+    def __init__(self, sizes, epochs=30, l_rate=3.0, batch_size=20, params=None):
         """
         :param sizes: number of neurons in the respective layers or the NN
         :param epochs: iterations over sample data
@@ -25,6 +24,8 @@ class NeuralNetwork():
         self.epochs = epochs
         self.l_rate = l_rate
         self.batch_size = batch_size
+        # list that contains the accuracy of the network per epoch
+        self.accuracy_per_epoch = []
 
         # We use dictionaries to store our network parameters
         self.weights, self.biases = self.init_params(params)
@@ -111,13 +112,14 @@ class NeuralNetwork():
 
         d_z2 = d_z2.reshape(n_output_nodes, 1)
 
-        delta_w['W2'] = np.dot(d_z2, weights['A1'].reshape(1, n_hidden_nodes))  # for the weights we use the activation of the hidden layer
+        # For the weights we use the activation of the hidden layer
+        delta_w['W2'] = np.dot(d_z2, weights['A1'].reshape(1, n_hidden_nodes))
 
         # Repeat Calculation for W1 and B1 with respect to the previous calculated dz_2
         error = np.dot(weights['W2'].T, d_z2)
         d_z1 = error * sigmoid_prime(weights['Z1']).reshape(n_hidden_nodes, 1)
         delta_b['B1'] = d_z1.reshape(n_hidden_nodes,) * 1
-        delta_w['W1'] = np.dot(d_z1, weights['A0'].reshape(1, n_input_nodes))  # this should be A0
+        delta_w['W1'] = np.dot(d_z1, weights['A0'].reshape(1, n_input_nodes))
 
         return delta_w, delta_b
 
@@ -129,7 +131,6 @@ class NeuralNetwork():
         # For each weight take the calculated partial derivative sum, divide it
         # by batch size to get the average then multiple it by the learning rate,
         # finally, minus that value from the current weight to get our new weights.
-
         for key, value in delta_w_sum.items():
             self.weights[key] -= (self.l_rate / self.batch_size) * value
 
@@ -145,20 +146,25 @@ class NeuralNetwork():
         It also calculates the accuracy of the network
         """
         predictions = []
-        partial_cost = np.zeros(self.sizes[-1])
+        partial_q_cost = np.zeros(self.sizes[-1])
+        partial_ce_cost = np.zeros(self.sizes[-1])
         for x, y in zip(x_test, y_test):
             # Run x through our network
             output = self.forward_pass(x)
             p = np.argmax(output)
             y_digit = np.argmax(y)
             predictions.append((p, y_digit))
-            partial_cost += (output - y) ** 2
+            partial_q_cost += (output - y) ** 2
+            partial_ce_cost += (y * np.log(output) + (1 - y) * np.log(1-output))
 
         # Quadratic cost
-        cost = np.sum(partial_cost) * (1 / (2 * len(x_test)))
+        q_cost = np.sum(partial_q_cost) * (1 / (2 * len(x_test)))
+        # Cross Entropy cost
+        ce_cost = np.sum(partial_ce_cost) * (1/len(x_test))
         # Prediction accuracy
         accuracy = sum(int(x == y) for (x, y) in predictions) / len(predictions)
-        return cost, accuracy
+        self.accuracy_per_epoch.append(accuracy)
+        return q_cost, ce_cost, accuracy
 
     def initialise_mini_batches(self, training_data):
         return [training_data[i:i + self.batch_size]
@@ -173,6 +179,9 @@ class NeuralNetwork():
         neural network for each epoch iteration
         :param y_test: the desired output of the x_test input
         """
+        print("Training Neural Network with params: l_rate={}, batch_size={}, epochs={},"
+              " sizes={}.".format(self.l_rate, self.batch_size, self.epochs, self.sizes))
+
         # Split the training set into batches of size batch_size
         batches = self.initialise_mini_batches(list(zip(x_train, y_train)))
 
@@ -204,10 +213,28 @@ class NeuralNetwork():
             # If we have test data, compute the network accuracy and quadratic cost,
             # else print the weights after each epoch
             if x_test is not None:
-                cost, accuracy = self.evaluate_test_data(x_test, y_test)
-                print('Epoch: {}, Quadratic cost: {}, Accuracy: {}'.format(i_epoch + 1, cost, accuracy))
+                q_cost, ce_cost, accuracy = self.evaluate_test_data(x_test, y_test)
+                print('Epoch: {}, Quadratic cost: {}, Cross Entropy cost: {}, '
+                      'Accuracy: {}'.format(i_epoch + 1, q_cost, ce_cost, accuracy))
             else:
                 print(self.weights['W1'])
                 print(self.weights['W2'])
                 print(self.biases['B1'])
                 print(self.biases['B2'])
+        print("\n")
+
+    def predict(self, x_test):
+        """
+        :param x_test: test samples that will be feed through
+        the network
+        :return: vector of predictions corresponding to the input
+        samples
+        """
+        predictions = []
+        for x in x_test:
+            # Run x through our network
+            output = self.forward_pass(x)
+            # Neuron with highest probability
+            p = np.argmax(output)
+            predictions.append(p)
+        return predictions
