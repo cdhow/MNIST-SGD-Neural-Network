@@ -1,4 +1,5 @@
 import numpy as np
+import matplotlib as plt
 
 
 # Sigmoid utility function
@@ -12,7 +13,7 @@ def sigmoid_prime(x):
 
 
 class NeuralNetwork():
-    def __init__(self, sizes, epochs=1000, l_rate=3, batch_size=30, params=None):
+    def __init__(self, sizes, epochs=30, l_rate=0.1, batch_size=20, params=None):
         """
         :param sizes: number of neurons in the respective layers or the NN
         :param epochs: iterations over sample data
@@ -100,14 +101,23 @@ class NeuralNetwork():
         # We then multiple that error with the partial derivatives of the output
         # layer activations with respect to the net inputs of the output layer
         # This can be achieved by passing the net inputs into sigmoid prime.
-        error = (output - y) * sigmoid_prime(weights['Z2'])
-        delta_b['B2'] = error  # Biases is error * 1 as biases neurons = 1
-        delta_w['W2'] = np.dot(error, weights['A2'])  # for the weights we use the activation of the hidden layer
+        error = (output - y)  # shape = (output_layer,)
+        n_output_nodes = self.sizes[2]
+        n_hidden_nodes = self.sizes[1]
+        n_input_nodes = self.sizes[0]
 
-        # Repeat Calculation for W1 and B1 with respect to the previous calculated error
-        error = np.dot(weights['W2'].T, error) * sigmoid_prime(weights['Z1'])
-        delta_b['B1'] = error
-        delta_w['W1'] = np.dot(error, weights['A1'])
+        d_z2 = error * sigmoid_prime(weights['Z2'])  # element-wise multiplication
+        delta_b['B2'] = d_z2 * 1  # Biases is error * 1 as biases neurons = 1
+
+        d_z2 = d_z2.reshape(n_output_nodes, 1)
+
+        delta_w['W2'] = np.dot(d_z2, weights['A1'].reshape(1, n_hidden_nodes))  # for the weights we use the activation of the hidden layer
+
+        # Repeat Calculation for W1 and B1 with respect to the previous calculated dz_2
+        error = np.dot(weights['W2'].T, d_z2)
+        d_z1 = error * sigmoid_prime(weights['Z1']).reshape(n_hidden_nodes, 1)
+        delta_b['B1'] = d_z1.reshape(n_hidden_nodes,) * 1
+        delta_w['W1'] = np.dot(d_z1, weights['A0'].reshape(1, n_input_nodes))  # this should be A0
 
         return delta_w, delta_b
 
@@ -119,29 +129,36 @@ class NeuralNetwork():
         # For each weight take the calculated partial derivative sum, divide it
         # by batch size to get the average then multiple it by the learning rate,
         # finally, minus that value from the current weight to get our new weights.
+
         for key, value in delta_w_sum.items():
-            for w in self.weights[key]:
-                w -= self.l_rate * (value / self.batch_size)
+            self.weights[key] -= (self.l_rate / self.batch_size) * value
 
         # Repeat the same for the biases
         for key, value in delta_b_sum.items():
-            for i in range(len(self.biases[key])):
-                self.biases[key][i] -= self.l_rate * (value[i] / self.batch_size)
+            self.biases[key] -= (self.l_rate / self.batch_size) * value
 
     def evaluate_test_data(self, x_test, y_test):
         """
         This method will run the test data through the
         neural network and calculate the quadratic cost
-        for the output
+        for the output.
+        It also calculates the accuracy of the network
         """
+        predictions = []
         partial_cost = np.zeros(self.sizes[-1])
         for x, y in zip(x_test, y_test):
             # Run x through our network
             output = self.forward_pass(x)
+            p = np.argmax(output)
+            y_digit = np.argmax(y)
+            predictions.append((p, y_digit))
             partial_cost += (output - y) ** 2
 
-        cost_sum = np.sum(partial_cost)
-        return cost_sum * (1 / (2 * len(x_test)))
+        # Quadratic cost
+        cost = np.sum(partial_cost) * (1 / (2 * len(x_test)))
+        # Prediction accuracy
+        accuracy = sum(int(x == y) for (x, y) in predictions) / len(predictions)
+        return cost, accuracy
 
     def initialise_mini_batches(self, training_data):
         return [training_data[i:i + self.batch_size]
@@ -164,8 +181,10 @@ class NeuralNetwork():
                 # Get all samples in the current batch
                 current_batch = batches[i_batch]
                 # Summed errors of the weights and biases of the current batch
-                summed_delta_w = {'W1': 0.0, 'W2': 0.0}
-                summed_delta_b = {'B1': np.zeros(self.sizes[1]), 'B2': np.zeros(self.sizes[2])}
+                summed_delta_w = {'W1': np.zeros((self.sizes[1], self.sizes[0])),
+                                  'W2': np.zeros((self.sizes[2], self.sizes[1]))}
+                summed_delta_b = {'B1': np.zeros(self.sizes[1]),
+                                  'B2': np.zeros(self.sizes[2])}
                 for x, y in current_batch:
                     # Feed input through network
                     output = self.forward_pass(x)
@@ -182,16 +201,13 @@ class NeuralNetwork():
                 # network params
                 self.update_params(summed_delta_w, summed_delta_b)
 
-            # If we have test data, compute the network accuracy
+            # If we have test data, compute the network accuracy and quadratic cost,
             # else print the weights after each epoch
             if x_test is not None:
-                cost = self.evaluate_test_data(x_test, y_test)
-                print('Epoch: {}, Quadratic cost: {}'.format(i_epoch + 1, cost))
+                cost, accuracy = self.evaluate_test_data(x_test, y_test)
+                print('Epoch: {}, Quadratic cost: {}, Accuracy: {}'.format(i_epoch + 1, cost, accuracy))
             else:
                 print(self.weights['W1'])
                 print(self.weights['W2'])
                 print(self.biases['B1'])
                 print(self.biases['B2'])
-
-
-

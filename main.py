@@ -28,9 +28,9 @@ def run_simple_network(n_input, n_hidden, n_output):
 
 
 def main():
-    n_input = sys.argv[1]
-    n_hidden = sys.argv[2]
-    n_output = sys.argv[3]
+    n_input = int(sys.argv[1])
+    n_hidden = int(sys.argv[2])
+    n_output = int(sys.argv[3])
 
     # To run MNST data from the data files, run the program with file name arguments
     if len(sys.argv) > 3:
