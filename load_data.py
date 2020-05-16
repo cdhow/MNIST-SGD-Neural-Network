@@ -3,6 +3,7 @@ import gzip
 
 
 def load_data(train_x, train_y, test_x, test_y, test_x2):
+    print("Loading data from files. Please wait...")
 
     # Training data
     tr_x = np.loadtxt(gzip.open(train_x, "rb"), delimiter=",", dtype=np.float128)

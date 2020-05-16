@@ -185,7 +185,7 @@ class NeuralNetwork():
         neural network for each epoch iteration
         :param y_test: the desired output of the x_test input
         """
-        print("Training Neural Network with params: l_rate={}, batch_size={}, epochs={},"
+        print("Training Neural Network with hyper-params: l_rate={}, batch_size={}, epochs={},"
               " sizes={}.".format(self.l_rate, self.batch_size, self.epochs, self.sizes))
 
         # Split the training set into batches of size batch_size
