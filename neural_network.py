@@ -26,6 +26,10 @@ class NeuralNetwork():
         self.batch_size = batch_size
         # list that contains the accuracy of the network per epoch
         self.accuracy_per_epoch = []
+        # list that contains the quadratic cost of the network per epoch
+        self.quadratic_cost_per_epoch = []
+        # list that contains the cross entropy cost of the network per epoch
+        self.cross_entropy_per_epoch = []
 
         # We use dictionaries to store our network parameters
         self.weights, self.biases = self.init_params(params)
@@ -159,8 +163,10 @@ class NeuralNetwork():
 
         # Quadratic cost
         q_cost = np.sum(partial_q_cost) * (1 / (2 * len(x_test)))
+        self.quadratic_cost_per_epoch.append(q_cost)
         # Cross Entropy cost
         ce_cost = np.sum(partial_ce_cost) * (1/len(x_test))
+        self.cross_entropy_per_epoch.append(ce_cost)
         # Prediction accuracy
         accuracy = sum(int(x == y) for (x, y) in predictions) / len(predictions)
         self.accuracy_per_epoch.append(accuracy)
