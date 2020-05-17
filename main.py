@@ -46,9 +46,8 @@ def plot_data(l_y=None, l_labels=None, bs_y=None, bs_labels=None, epoch=30, cost
         axs[1].set_ylabel(cost_type)
 
     plt.tight_layout()
-    print("Saving graph to plots/EpochsVS{}.png".format(cost_type))
-    plt.savefig('plots/EpochsVS{}.png'.format(cost_type))
-    plt.show()
+    print("Saving graph to plots/EpochsVS{}.png".format(cost_type).replace(" ", ""))
+    plt.savefig('plots/EpochsVS{}.png'.format(cost_type).replace(" ", ""))
 
 
 # For saving basic plots (used in optional hyper-params section)
@@ -227,6 +226,16 @@ def run(train_x, train_y, test_x, test_y, n_input, n_hidden, n_output, test_x2=N
                                                                     n_input, n_hidden, n_output)
             bs_labels, bs_acur, bs_q_cost, bs_ce_cost = compare_batch_sizes(train_x, train_y, test_x, test_y,
                                                                             n_input, n_hidden, n_output)
+            # TODO Remove
+            file_debug(l_labels, l_acur, "Accuracies")
+            file_debug(l_labels, l_q_cost, "Q Cost")
+            file_debug(l_labels, l_ce_cost, "CE cost")
+
+            file_debug(bs_labels, bs_acur, "Accuracies")
+            file_debug(bs_labels, bs_q_cost, "Q Cost")
+            file_debug(bs_labels, bs_ce_cost, "CE cost")
+
+
             # For accuracies
             plot_data(l_y=l_acur, l_labels=l_labels, bs_y=bs_acur,
                       bs_labels=bs_labels, cost_type="Accuracies")
@@ -244,15 +253,15 @@ def run(train_x, train_y, test_x, test_y, n_input, n_hidden, n_output, test_x2=N
             print("Invalid option: " + opt)
 
 
-# def file_debug(label, accuracies, header):
-#     with open('predictions/debug.txt', 'a') as f:
-#         f.write(header)
-#         for l, y in zip(label, accuracies):
-#             f.write("%s, " % l)
-#             for i in y:
-#                 f.write("%s, " % i)
-#             f.write("\n")
-#         f.write("\n")
+def file_debug(label, accuracies, header):
+    with open('debug.txt', 'a') as f:
+        f.write(header)
+        for l, y in zip(label, accuracies):
+            f.write("%s, " % l)
+            for i in y:
+                f.write("%s, " % i)
+            f.write("\n")
+        f.write("\n")
 
 
 def main():
